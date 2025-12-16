@@ -27,8 +27,8 @@ const toastMessage = document.getElementById('toast-message');
 // Configuration
 // =============================================================================
 
-// API URL - Change this to your deployed backend URL
-const API_URL = 'https://citation-extractor.onrender.com';
+// API URL - Replace with your actual Render deployment URL
+const API_URL = 'https://getreferences.onrender.com';
 
 // =============================================================================
 // State
