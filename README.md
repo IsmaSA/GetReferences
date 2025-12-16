@@ -1,5 +1,7 @@
 # 📚 Citation Extractor
 
+https://ismasa.github.io/GetReferences/
+
 A lightweight scientific web application that extracts keyword-linked citations from academic documents.  Upload Word documents or text files, enter a keyword, and automatically extract all in-text literature references associated with that keyword. 
 
 ## Features
