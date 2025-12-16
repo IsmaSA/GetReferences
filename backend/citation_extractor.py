@@ -79,7 +79,7 @@ CITATION_PATTERNS = [
 
 # Pattern for multiple citations within parentheses:  (Author, 2010; Coauthor et al., 2012)
 GROUPED_CITATION_PATTERN = re.compile(
-    r'\(([^)]+\d{4}[a-z]?(? :\s*;\s*[^)]+\d{4}[a-z]?)+)\)'
+    r'\(([^)]+\d{4}[a-z]? (? :\s*;\s*[^)]+\d{4}[a-z]?)+)\)'
 )
 
 # Pattern to split grouped citations by semicolon
