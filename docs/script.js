@@ -24,6 +24,13 @@ const toast = document.getElementById('toast');
 const toastMessage = document.getElementById('toast-message');
 
 // =============================================================================
+// Configuration
+// =============================================================================
+
+// API URL - Change this to your deployed backend URL
+const API_URL = 'https://citation-extractor.onrender.com';
+
+// =============================================================================
 // State
 // =============================================================================
 
@@ -241,7 +248,7 @@ async function extractReferences() {
             formData.append('files', file);
         });
         
-        const response = await fetch('/extract', {
+        const response = await fetch(`${API_URL}/extract`, {
             method: 'POST',
             body: formData
         });
@@ -260,7 +267,11 @@ async function extractReferences() {
         }
         
     } catch (error) {
-        showError(error.message || 'An error occurred while processing your request.');
+        if (error.message === 'Failed to fetch') {
+            showError('Cannot connect to server. The backend service may be starting up - please try again in a moment.');
+        } else {
+            showError(error.message || 'An error occurred while processing your request.');
+        }
     } finally {
         setLoading(false);
     }
