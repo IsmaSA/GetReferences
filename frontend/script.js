@@ -1,121 +1,188 @@
 /**
  * Citation Extractor - Frontend JavaScript
- * Handles file uploads, drag-and-drop, and API communication
+ * Modern UI with enhanced user experience
  */
 
 // =============================================================================
 // DOM Elements
 // =============================================================================
 
-const dropZone = document.getElementById('drop-zone');
+const dropZone = document. getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const fileList = document.getElementById('file-list');
 const keywordInput = document. getElementById('keyword-input');
 const extractBtn = document.getElementById('extract-btn');
-const resultsSection = document. getElementById('results-section');
-const resultsInfo = document. getElementById('results-info');
+const clearBtn = document.getElementById('clear-btn');
+const resultsSection = document.getElementById('results-section');
+const resultsCount = document.getElementById('results-count');
 const resultsContainer = document.getElementById('results-container');
+const resultsFooter = document.getElementById('results-footer');
 const copyBtn = document.getElementById('copy-btn');
-const errorMessage = document. getElementById('error-message');
+const downloadBtn = document.getElementById('download-btn');
+const errorMessage = document.getElementById('error-message');
+const errorText = document.getElementById('error-text');
+const toast = document.getElementById('toast');
+const toastMessage = document.getElementById('toast-message');
 
 // =============================================================================
 // State
 // =============================================================================
 
 let uploadedFiles = [];
+let extractedReferences = [];
 
 // =============================================================================
-// File Upload Handling
+// Utility Functions
 // =============================================================================
 
-/**
- * Handle file selection from input or drop
- * @param {FileList} files - Selected files
- */
-function handleFiles(files) {
-    const validExtensions = ['.docx', '. txt'];
-    
-    for (const file of files) {
-        const ext = '.' + file.name.split('.').pop().toLowerCase();
-        
-        if (! validExtensions.includes(ext)) {
-            showError(`Unsupported file type: ${file.name}.  Only .docx and .txt files are supported.`);
-            continue;
-        }
-        
-        // Check for duplicates
-        if (uploadedFiles.some(f => f. name === file.name && f.size === file.size)) {
-            continue;
-        }
-        
-        uploadedFiles.push(file);
-    }
-    
-    updateFileList();
-    updateExtractButton();
-    hideError();
-}
-
-/**
- * Update the displayed file list
- */
-function updateFileList() {
-    fileList.innerHTML = '';
-    
-    uploadedFiles.forEach((file, index) => {
-        const item = document.createElement('div');
-        item.className = 'file-item';
-        
-        const icon = file.name.endsWith('.docx') ? '📄' : '📝';
-        const size = formatFileSize(file. size);
-        
-        item.innerHTML = `
-            <div class="file-item-info">
-                <span class="file-item-icon">${icon}</span>
-                <span class="file-item-name">${escapeHtml(file.name)}</span>
-                <span class="file-item-size">(${size})</span>
-            </div>
-            <button class="file-item-remove" data-index="${index}" title="Remove file">×</button>
-        `;
-        
-        fileList.appendChild(item);
-    });
-    
-    // Add remove handlers
-    fileList.querySelectorAll('.file-item-remove').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            uploadedFiles.splice(index, 1);
-            updateFileList();
-            updateExtractButton();
-        });
-    });
-}
-
-/**
- * Format file size in human-readable format
- * @param {number} bytes - File size in bytes
- * @returns {string} Formatted size
- */
 function formatFileSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-/**
- * Escape HTML special characters
- * @param {string} text - Text to escape
- * @returns {string} Escaped text
- */
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
+function showToast(message, duration = 3000) {
+    toastMessage.textContent = message;
+    toast.hidden = false;
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.hidden = true, 300);
+    }, duration);
+}
+
+function getFileIcon(filename) {
+    if (filename.endsWith('. docx')) return '📄';
+    if (filename.endsWith('.txt')) return '📝';
+    return '📁';
+}
+
 // =============================================================================
-// Drag and Drop Handling
+// File Handling
+// =============================================================================
+
+function handleFiles(files) {
+    const validExtensions = ['. docx', '.txt'];
+    let addedCount = 0;
+    
+    for (const file of files) {
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (! validExtensions.includes(ext)) {
+            showError(`Unsupported file:  ${file.name}.  Only .docx and . txt files are supported. `);
+            continue;
+        }
+        
+        if (uploadedFiles.some(f => f. name === file.name && f.size === file.size)) {
+            continue;
+        }
+        
+        uploadedFiles.push(file);
+        addedCount++;
+    }
+    
+    if (addedCount > 0) {
+        showToast(`Added ${addedCount} file${addedCount > 1 ? 's' : ''}`);
+    }
+    
+    updateFileList();
+    updateUI();
+    hideError();
+}
+
+function updateFileList() {
+    if (uploadedFiles. length === 0) {
+        fileList.innerHTML = '';
+        return;
+    }
+    
+    fileList.innerHTML = uploadedFiles.map((file, index) => `
+        <div class="file-item">
+            <div class="file-icon">${getFileIcon(file.name)}</div>
+            <div class="file-info">
+                <div class="file-name">${escapeHtml(file.name)}</div>
+                <div class="file-size">${formatFileSize(file.size)}</div>
+            </div>
+            <button class="file-remove" data-index="${index}" title="Remove file">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+    
+    // Add remove handlers
+    fileList.querySelectorAll('.file-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.currentTarget.dataset.index);
+            uploadedFiles. splice(index, 1);
+            updateFileList();
+            updateUI();
+            showToast('File removed');
+        });
+    });
+}
+
+// =============================================================================
+// UI State Management
+// =============================================================================
+
+function updateUI() {
+    const hasFiles = uploadedFiles.length > 0;
+    const hasKeyword = keywordInput.value.trim().length > 0;
+    
+    extractBtn.disabled = !(hasFiles && hasKeyword);
+    clearBtn.hidden = !(hasFiles || hasKeyword || extractedReferences.length > 0);
+}
+
+function setLoading(loading) {
+    extractBtn.disabled = loading;
+    
+    const btnContent = extractBtn.querySelector('. btn-content');
+    const btnLoading = extractBtn. querySelector('.btn-loading');
+    
+    btnContent.hidden = loading;
+    btnLoading.hidden = !loading;
+}
+
+function showError(message) {
+    errorText.textContent = message;
+    errorMessage.hidden = false;
+}
+
+function hideError() {
+    errorMessage.hidden = true;
+}
+
+function hideResults() {
+    resultsSection.hidden = true;
+    resultsContainer.innerHTML = '';
+    resultsFooter.hidden = true;
+    extractedReferences = [];
+}
+
+function clearAll() {
+    uploadedFiles = [];
+    extractedReferences = [];
+    keywordInput.value = '';
+    fileInput.value = '';
+    updateFileList();
+    hideResults();
+    hideError();
+    updateUI();
+    showToast('Cleared all');
+}
+
+// =============================================================================
+// Drag and Drop
 // =============================================================================
 
 dropZone.addEventListener('dragover', (e) => {
@@ -137,9 +204,8 @@ dropZone.addEventListener('drop', (e) => {
     }
 });
 
-// Click on drop zone triggers file input
-dropZone. addEventListener('click', (e) => {
-    if (e. target. tagName !== 'LABEL' && e.target. tagName !== 'INPUT') {
+dropZone.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') {
         fileInput.click();
     }
 });
@@ -147,66 +213,64 @@ dropZone. addEventListener('click', (e) => {
 fileInput.addEventListener('change', (e) => {
     if (e.target. files.length > 0) {
         handleFiles(e. target.files);
-        fileInput.value = ''; // Reset input
+        fileInput.value = '';
     }
 });
 
 // =============================================================================
-// Form Validation
+// Form Events
 // =============================================================================
 
-/**
- * Update extract button state based on form validity
- */
-function updateExtractButton() {
-    const hasFiles = uploadedFiles.length > 0;
-    const hasKeyword = keywordInput.value.trim().length > 0;
-    
-    extractBtn.disabled = !(hasFiles && hasKeyword);
-}
+keywordInput.addEventListener('input', updateUI);
 
-keywordInput.addEventListener('input', updateExtractButton);
+keywordInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !extractBtn.disabled) {
+        extractReferences();
+    }
+});
+
+extractBtn.addEventListener('click', extractReferences);
+clearBtn.addEventListener('click', clearAll);
 
 // =============================================================================
 // API Communication
 // =============================================================================
 
-/**
- * Extract references from uploaded files
- */
 async function extractReferences() {
-    const keyword = keywordInput. value.trim();
+    const keyword = keywordInput.value. trim();
     
     if (uploadedFiles.length === 0 || ! keyword) {
         return;
     }
     
-    // Update UI to loading state
     setLoading(true);
     hideError();
     hideResults();
     
     try {
-        // Build form data
         const formData = new FormData();
         uploadedFiles.forEach(file => {
-            formData.append('files', file);
+            formData. append('files', file);
         });
         formData.append('keyword', keyword);
         
-        // Send request to backend
         const response = await fetch('/extract', {
             method: 'POST',
             body: formData
         });
         
-        if (! response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const errorData = await response. json().catch(() => ({}));
             throw new Error(errorData.detail || `Server error: ${response. status}`);
         }
         
         const data = await response.json();
-        displayResults(data. references, keyword);
+        extractedReferences = data.references;
+        displayResults(extractedReferences, keyword);
+        
+        if (extractedReferences.length > 0) {
+            showToast(`Found ${extractedReferences.length} reference${extractedReferences. length > 1 ? 's' :  ''}`);
+        }
         
     } catch (error) {
         showError(error.message || 'An error occurred while processing your request.');
@@ -215,113 +279,96 @@ async function extractReferences() {
     }
 }
 
-extractBtn.addEventListener('click', extractReferences);
-
-// Allow Enter key to trigger extraction
-keywordInput. addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !extractBtn. disabled) {
-        extractReferences();
-    }
-});
-
 // =============================================================================
 // Results Display
 // =============================================================================
 
-/**
- * Display extracted references
- * @param {string[]} references - List of extracted references
- * @param {string} keyword - The keyword used for extraction
- */
 function displayResults(references, keyword) {
     resultsSection.hidden = false;
     
-    if (references.length === 0) {
-        resultsInfo. textContent = `No references found near "${keyword}"`;
+    if (references. length === 0) {
+        resultsCount.textContent = '0 found';
         resultsContainer.innerHTML = `
             <div class="no-results">
-                <p>No citations were found in proximity to your keyword.</p>
-                <p>Try a different keyword or check your documents. </p>
+                <div class="no-results-icon">🔍</div>
+                <p><strong>No references found near "${escapeHtml(keyword)}"</strong></p>
+                <p>Try a different keyword or check that your documents contain citations.</p>
             </div>
         `;
-        copyBtn.hidden = true;
+        resultsFooter.hidden = true;
         return;
     }
     
-    resultsInfo.textContent = `Found ${references.length} reference${references.length !== 1 ? 's' : ''} linked to "${keyword}"`;
+    resultsCount.textContent = `${references.length} found`;
     
-    resultsContainer. innerHTML = references.map((ref, index) => `
+    resultsContainer.innerHTML = references.map((ref, index) => `
         <div class="reference-item">
-            <span class="reference-number">${index + 1}.</span>
+            <span class="reference-number">${index + 1}</span>
             <span class="reference-text">${escapeHtml(ref)}</span>
+            <button class="reference-copy" data-ref="${escapeHtml(ref)}" title="Copy reference">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+            </button>
         </div>
     `).join('');
     
-    copyBtn. hidden = false;
-}
-
-/**
- * Hide results section
- */
-function hideResults() {
-    resultsSection.hidden = true;
-    resultsContainer.innerHTML = '';
-    copyBtn.hidden = true;
+    resultsFooter.hidden = false;
+    
+    // Add individual copy handlers
+    resultsContainer.querySelectorAll('.reference-copy').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const ref = e.currentTarget.dataset.ref;
+            await copyToClipboard(ref);
+            showToast('Reference copied! ');
+        });
+    });
 }
 
 // =============================================================================
-// Copy to Clipboard
+// Export Functions
 // =============================================================================
+
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        return false;
+    }
+}
 
 copyBtn.addEventListener('click', async () => {
-    const references = Array.from(resultsContainer.querySelectorAll('.reference-text'))
-        .map(el => el.textContent)
-        .join('\n');
+    const text = extractedReferences.join('\n');
+    const success = await copyToClipboard(text);
     
-    try {
-        await navigator.clipboard. writeText(references);
-        
-        // Visual feedback
-        const originalText = copyBtn.textContent;
-        copyBtn. textContent = '✓ Copied! ';
-        setTimeout(() => {
-            copyBtn.textContent = originalText;
-        }, 2000);
-    } catch (err) {
+    if (success) {
+        showToast('All references copied to clipboard! ');
+    } else {
         showError('Failed to copy to clipboard');
     }
 });
 
-// =============================================================================
-// UI Helpers
-// =============================================================================
-
-/**
- * Set loading state
- * @param {boolean} loading - Whether loading is active
- */
-function setLoading(loading) {
-    extractBtn.disabled = loading;
+downloadBtn.addEventListener('click', () => {
+    const text = extractedReferences.join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
     
-    const btnText = extractBtn.querySelector('. btn-text');
-    const btnLoading = extractBtn.querySelector('.btn-loading');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `references_${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     
-    btnText.hidden = loading;
-    btnLoading.hidden = !loading;
-}
+    showToast('References downloaded! ');
+});
 
-/**
- * Show error message
- * @param {string} message - Error message to display
- */
-function showError(message) {
-    errorMessage.textContent = message;
-    errorMessage.hidden = false;
-}
+// =============================================================================
+// Initialize
+// =============================================================================
 
-/**
- * Hide error message
- */
-function hideError() {
-    errorMessage.hidden = true;
-}
+updateUI();

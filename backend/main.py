@@ -10,8 +10,13 @@ from fastapi.staticfiles import StaticFiles
 from typing import List
 import os
 
-from text_processor import extract_text_from_file, split_into_sentences
-from citation_extractor import extract_citations_with_keyword_proximity
+# Use relative imports when running as a package
+try:
+    from backend.text_processor import extract_text_from_file, split_into_sentences
+    from backend.citation_extractor import extract_citations_with_keyword_proximity
+except ImportError: 
+    from text_processor import extract_text_from_file, split_into_sentences
+    from citation_extractor import extract_citations_with_keyword_proximity
 
 app = FastAPI(
     title="Citation Extractor API",
@@ -31,18 +36,11 @@ app.add_middleware(
 
 @app.post("/extract")
 async def extract_references(
-    files:  List[UploadFile] = File(... , description="One or more . docx or .txt files"),
+    files: List[UploadFile] = File(..., description="One or more . docx or .txt files"),
     keyword: str = Form(... , description="Keyword or phrase to search for")
 ):
     """
     Extract citations from uploaded documents that appear near the specified keyword.
-    
-    Args:
-        files: List of uploaded document files (. docx or .txt)
-        keyword: The keyword or phrase to search for
-        
-    Returns: 
-        JSON object with list of deduplicated references
     """
     if not keyword. strip():
         raise HTTPException(status_code=400, detail="Keyword cannot be empty")
@@ -58,8 +56,8 @@ async def extract_references(
         filename = file.filename. lower()
         if not (filename.endswith('. docx') or filename.endswith('.txt')):
             raise HTTPException(
-                status_code=400, 
-                detail=f"Unsupported file type:  {file.filename}. Only .docx and .txt files are supported."
+                status_code=400,
+                detail=f"Unsupported file type:  {file.filename}. Only .docx and . txt files are supported."
             )
         
         try: 
@@ -98,7 +96,7 @@ async def health_check():
     return {"status": "healthy"}
 
 
-# Mount frontend static files (when running from project root)
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
-if os.path. exists(frontend_path):
+# Mount frontend static files
+frontend_path = os.path. join(os.path.dirname(__file__), "..", "frontend")
+if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
