@@ -7,10 +7,9 @@
 // DOM Elements
 // =============================================================================
 
-const dropZone = document. getElementById('drop-zone');
+const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const fileList = document.getElementById('file-list');
-const keywordInput = document. getElementById('keyword-input');
 const extractBtn = document.getElementById('extract-btn');
 const clearBtn = document.getElementById('clear-btn');
 const resultsSection = document.getElementById('results-section');
@@ -59,7 +58,7 @@ function showToast(message, duration = 3000) {
 }
 
 function getFileIcon(filename) {
-    if (filename.endsWith('. docx')) return '📄';
+    if (filename.endsWith('.docx')) return '📄';
     if (filename.endsWith('.txt')) return '📝';
     return '📁';
 }
@@ -69,18 +68,18 @@ function getFileIcon(filename) {
 // =============================================================================
 
 function handleFiles(files) {
-    const validExtensions = ['. docx', '.txt'];
+    const validExtensions = ['.docx', '.doc', '.txt'];
     let addedCount = 0;
     
     for (const file of files) {
         const ext = '.' + file.name.split('.').pop().toLowerCase();
         
-        if (! validExtensions.includes(ext)) {
-            showError(`Unsupported file:  ${file.name}.  Only .docx and . txt files are supported. `);
+        if (!validExtensions.includes(ext)) {
+            showError(`Unsupported file: ${file.name}. Only .docx, .doc and .txt files are supported.`);
             continue;
         }
         
-        if (uploadedFiles.some(f => f. name === file.name && f.size === file.size)) {
+        if (uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
             continue;
         }
         
@@ -98,7 +97,7 @@ function handleFiles(files) {
 }
 
 function updateFileList() {
-    if (uploadedFiles. length === 0) {
+    if (uploadedFiles.length === 0) {
         fileList.innerHTML = '';
         return;
     }
@@ -123,7 +122,7 @@ function updateFileList() {
     fileList.querySelectorAll('.file-remove').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const index = parseInt(e.currentTarget.dataset.index);
-            uploadedFiles. splice(index, 1);
+            uploadedFiles.splice(index, 1);
             updateFileList();
             updateUI();
             showToast('File removed');
@@ -137,17 +136,17 @@ function updateFileList() {
 
 function updateUI() {
     const hasFiles = uploadedFiles.length > 0;
-    const hasKeyword = keywordInput.value.trim().length > 0;
     
-    extractBtn.disabled = !(hasFiles && hasKeyword);
-    clearBtn.hidden = !(hasFiles || hasKeyword || extractedReferences.length > 0);
+    // Enable extract button if files are uploaded
+    extractBtn.disabled = !hasFiles;
+    clearBtn.hidden = !(hasFiles || extractedReferences.length > 0);
 }
 
 function setLoading(loading) {
     extractBtn.disabled = loading;
     
-    const btnContent = extractBtn.querySelector('. btn-content');
-    const btnLoading = extractBtn. querySelector('.btn-loading');
+    const btnContent = extractBtn.querySelector('.btn-content');
+    const btnLoading = extractBtn.querySelector('.btn-loading');
     
     btnContent.hidden = loading;
     btnLoading.hidden = !loading;
@@ -172,7 +171,6 @@ function hideResults() {
 function clearAll() {
     uploadedFiles = [];
     extractedReferences = [];
-    keywordInput.value = '';
     fileInput.value = '';
     updateFileList();
     hideResults();
@@ -187,12 +185,12 @@ function clearAll() {
 
 dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
-    dropZone. classList.add('drag-over');
+    dropZone.classList.add('drag-over');
 });
 
-dropZone. addEventListener('dragleave', (e) => {
-    e. preventDefault();
-    dropZone.classList. remove('drag-over');
+dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
 });
 
 dropZone.addEventListener('drop', (e) => {
@@ -211,8 +209,8 @@ dropZone.addEventListener('click', (e) => {
 });
 
 fileInput.addEventListener('change', (e) => {
-    if (e.target. files.length > 0) {
-        handleFiles(e. target.files);
+    if (e.target.files.length > 0) {
+        handleFiles(e.target.files);
         fileInput.value = '';
     }
 });
@@ -220,14 +218,6 @@ fileInput.addEventListener('change', (e) => {
 // =============================================================================
 // Form Events
 // =============================================================================
-
-keywordInput.addEventListener('input', updateUI);
-
-keywordInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !extractBtn.disabled) {
-        extractReferences();
-    }
-});
 
 extractBtn.addEventListener('click', extractReferences);
 clearBtn.addEventListener('click', clearAll);
@@ -237,9 +227,7 @@ clearBtn.addEventListener('click', clearAll);
 // =============================================================================
 
 async function extractReferences() {
-    const keyword = keywordInput.value. trim();
-    
-    if (uploadedFiles.length === 0 || ! keyword) {
+    if (uploadedFiles.length === 0) {
         return;
     }
     
@@ -250,9 +238,8 @@ async function extractReferences() {
     try {
         const formData = new FormData();
         uploadedFiles.forEach(file => {
-            formData. append('files', file);
+            formData.append('files', file);
         });
-        formData.append('keyword', keyword);
         
         const response = await fetch('/extract', {
             method: 'POST',
@@ -260,16 +247,16 @@ async function extractReferences() {
         });
         
         if (!response.ok) {
-            const errorData = await response. json().catch(() => ({}));
-            throw new Error(errorData.detail || `Server error: ${response. status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `Server error: ${response.status}`);
         }
         
         const data = await response.json();
         extractedReferences = data.references;
-        displayResults(extractedReferences, keyword);
+        displayResults(extractedReferences);
         
         if (extractedReferences.length > 0) {
-            showToast(`Found ${extractedReferences.length} reference${extractedReferences. length > 1 ? 's' :  ''}`);
+            showToast(`Found ${extractedReferences.length} reference${extractedReferences.length > 1 ? 's' : ''}`);
         }
         
     } catch (error) {
@@ -283,16 +270,16 @@ async function extractReferences() {
 // Results Display
 // =============================================================================
 
-function displayResults(references, keyword) {
+function displayResults(references) {
     resultsSection.hidden = false;
     
-    if (references. length === 0) {
+    if (references.length === 0) {
         resultsCount.textContent = '0 found';
         resultsContainer.innerHTML = `
             <div class="no-results">
                 <div class="no-results-icon">🔍</div>
-                <p><strong>No references found near "${escapeHtml(keyword)}"</strong></p>
-                <p>Try a different keyword or check that your documents contain citations.</p>
+                <p><strong>No references found</strong></p>
+                <p>Check that your documents contain citations.</p>
             </div>
         `;
         resultsFooter.hidden = true;
@@ -308,7 +295,7 @@ function displayResults(references, keyword) {
             <button class="reference-copy" data-ref="${escapeHtml(ref)}" title="Copy reference">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1-2 2v1"></path>
                 </svg>
             </button>
         </div>
@@ -321,7 +308,7 @@ function displayResults(references, keyword) {
         btn.addEventListener('click', async (e) => {
             const ref = e.currentTarget.dataset.ref;
             await copyToClipboard(ref);
-            showToast('Reference copied! ');
+            showToast('Reference copied!');
         });
     });
 }
@@ -345,7 +332,7 @@ copyBtn.addEventListener('click', async () => {
     const success = await copyToClipboard(text);
     
     if (success) {
-        showToast('All references copied to clipboard! ');
+        showToast('All references copied to clipboard!');
     } else {
         showError('Failed to copy to clipboard');
     }
@@ -364,7 +351,7 @@ downloadBtn.addEventListener('click', () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    showToast('References downloaded! ');
+    showToast('References downloaded!');
 });
 
 // =============================================================================

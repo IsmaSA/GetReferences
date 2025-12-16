@@ -1,10 +1,10 @@
 """
-FastAPI application for citation extraction from academic documents. 
-Provides a POST /extract endpoint that accepts document files and a keyword,
-returning all citations found in proximity to that keyword.
+FastAPI application for citation extraction from academic documents.
+Provides a POST /extract endpoint that accepts document files,
+returning all citations found in the documents.
 """
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from typing import List
@@ -13,14 +13,14 @@ import os
 # Use relative imports when running as a package
 try:
     from backend.text_processor import extract_text_from_file, split_into_sentences
-    from backend.citation_extractor import extract_citations_with_keyword_proximity
-except ImportError: 
+    from backend.citation_extractor import extract_all_citations
+except ImportError:
     from text_processor import extract_text_from_file, split_into_sentences
-    from citation_extractor import extract_citations_with_keyword_proximity
+    from citation_extractor import extract_all_citations
 
 app = FastAPI(
     title="Citation Extractor API",
-    description="Extract keyword-linked citations from academic documents",
+    description="Extract citations from academic documents",
     version="1.0.0"
 )
 
@@ -36,15 +36,11 @@ app.add_middleware(
 
 @app.post("/extract")
 async def extract_references(
-    files: List[UploadFile] = File(..., description="One or more . docx or .txt files"),
-    keyword: str = Form(... , description="Keyword or phrase to search for")
+    files: List[UploadFile] = File(..., description="One or more .docx or .txt files")
 ):
     """
-    Extract citations from uploaded documents that appear near the specified keyword.
+    Extract all citations from uploaded documents.
     """
-    if not keyword. strip():
-        raise HTTPException(status_code=400, detail="Keyword cannot be empty")
-    
     if not files:
         raise HTTPException(status_code=400, detail="At least one file is required")
     
@@ -53,14 +49,14 @@ async def extract_references(
     
     for file in files:
         # Validate file extension
-        filename = file.filename. lower()
-        if not (filename.endswith('. docx') or filename.endswith('.txt')):
+        filename = file.filename.lower()
+        if not (filename.endswith('.docx') or filename.endswith('.txt')):
             raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported file type:  {file.filename}. Only .docx and . txt files are supported."
+                detail=f"Unsupported file type: {file.filename}. Only .docx and .txt files are supported."
             )
         
-        try: 
+        try:
             # Read file content
             content = await file.read()
             
@@ -75,7 +71,7 @@ async def extract_references(
                 detail=f"Error processing file {file.filename}: {str(e)}"
             )
     
-    if not all_text: 
+    if not all_text:
         return {"references": []}
     
     # Merge all text while preserving sentence boundaries
@@ -84,8 +80,8 @@ async def extract_references(
     # Split into sentences
     sentences = split_into_sentences(combined_text)
     
-    # Extract citations with keyword proximity filtering
-    references = extract_citations_with_keyword_proximity(sentences, keyword. strip())
+    # Extract all citations
+    references = extract_all_citations(sentences)
     
     return {"references": references}
 
@@ -97,6 +93,6 @@ async def health_check():
 
 
 # Mount frontend static files
-frontend_path = os.path. join(os.path.dirname(__file__), "..", "frontend")
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
